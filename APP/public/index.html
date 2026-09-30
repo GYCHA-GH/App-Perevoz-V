@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>APP</title>
+
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Geist+Pixel&display=swap");
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100%;
+        }
+
+        body {
+            min-height: 100vh;
+            overflow: hidden;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            padding: 40px;
+
+            font-family: "Geist Pixel", monospace;
+
+            color: #fff;
+
+            background: #000;
+        }
+
+        /* =========================
+           PARTICLE CANVAS
+        ========================= */
+
+        #particles {
+            position: fixed;
+
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            z-index: 0;
+
+            pointer-events: none;
+        }
+
+        /* =========================
+           BACKGROUND
+        ========================= */
+
+        .background {
+            position: fixed;
+
+            inset: 0;
+
+            z-index: -1;
+
+            pointer-events: none;
+        }
+
+        .grid {
+            display: none;
+            position: absolute;
+
+            inset: -50%;
+
+            opacity: 0.25;
+
+            background-image:
+                linear-gradient(
+                    rgba(255,255,255,0.018) 1px,
+                    transparent 1px
+                ),
+                linear-gradient(
+                    90deg,
+                    rgba(255,255,255,0.018) 1px,
+                    transparent 1px
+                );
+
+            background-size: 60px 60px;
+
+            transform: rotate(-8deg);
+        }
+
+        .orb {
+            display: none;
+            position: absolute;
+
+            width: 420px;
+            height: 420px;
+
+            border-radius: 50%;
+
+            filter: blur(120px);
+
+            opacity: 0.16;
+        }
+
+        .orb.one {
+            top: -200px;
+            left: -120px;
+
+            background: #5965ff;
+        }
+
+        .orb.two {
+            right: -200px;
+            bottom: -200px;
+
+            background: #ff3ea5;
+        }
+
+        .space-glow {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, rgba(30, 35, 70, 0.16), transparent 62%);
+        }
+
+        .guess-game { margin-bottom: 22px; padding: 24px; border: 1px solid rgba(140,140,255,.26); border-radius: 14px; background: rgba(12,12,28,.9); }
+        .game-header,.game-input-row,.game-actions { display:flex; align-items:center; gap:10px; } .game-header { justify-content:space-between; }
+        .game-kicker,.guess-label,.game-hint { color:#8585ad; font-size:10px; letter-spacing:1px; } .guess-game h2 { margin-top:20px; font-size:24px; }
+        .attempt-counter { color:#8c8cff; font-size:20px; font-weight:bold; } .game-description,.game-message { margin:14px 0; color:#b6b6c9; line-height:1.5; }
+        .teacher-panel label { display:block; margin-bottom:8px; } .game-input-row input { width:150px; padding:12px; border:1px solid #34345a; border-radius:7px; color:white; background:#090914; font:inherit; }
+        .game-input-row button,.answer-button,.restart-button { font-family: inherit; border:0; border-radius:7px; padding:12px; color:white; background:#4747b8; font-size:11px; font-weight:bold; cursor:pointer; }
+        .answer-button.lower { background:#803b62; } .answer-button.equal { background:#287755; } .answer-button.higher { background:#3b5c94; } .is-hidden { display:none; }
+        .guess-display { display:flex; align-items:baseline; justify-content:space-between; } .guess-display strong { font-size:54px; } .game-actions { flex-wrap:wrap; }
+        .restart-button { margin-top:16px; background:transparent; border:1px solid #34345a; }
+        @media(max-width:600px) { .guess-game { padding:18px; } .game-input-row,.game-actions { align-items:stretch; flex-direction:column; } .game-input-row input,.game-input-row button,.answer-button { width:100%; } }
+
+        /* =========================
+           MAIN
+        ========================= */
+
+        .wrapper {
+            position: relative;
+
+            z-index: 2;
+
+            width: 100%;
+            max-width: 720px;
+        }
+
+        .logo {
+            margin-bottom: 18px;
+
+            text-align: center;
+
+            font-size: 52px;
+            font-weight: 900;
+
+            letter-spacing: -5px;
+        }
+
+        .logo span {
+            color: #666;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            gap: 8px;
+
+            margin-bottom: 25px;
+
+            color: #666;
+
+            font-size: 10px;
+            font-weight: 700;
+
+            letter-spacing: 2px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+
+            border-radius: 50%;
+
+            background: #8aff8a;
+
+            box-shadow:
+                0 0 10px rgba(138,255,138,0.7);
+        }
+
+        /* =========================
+           CARD
+        ========================= */
+
+        .card {
+            position: relative;
+
+            padding: 42px;
+
+            overflow: hidden;
+
+            background: rgba(10, 10, 10, 0);
+
+            border: 1px solid rgba(255,255,255,0.1);
+
+            border-radius: 20px;
+
+            backdrop-filter: blur(18px);
+
+            box-shadow:
+                0 30px 100px rgba(0,0,0,0.7),
+                inset 0 1px rgba(255,255,255,0.05);
+        }
+
+        .card::before {
+            content: "";
+
+            position: absolute;
+
+            top: 0;
+            left: 10%;
+
+            width: 80%;
+            height: 1px;
+
+            
+            ;
+        }
+
+        .corner {
+            position: absolute;
+
+            width: 35px;
+            height: 35px;
+
+            opacity: 0.3;
+        }
+
+        .corner::before,
+        .corner::after {
+            content: "";
+
+            position: absolute;
+
+            background: #fff;
+        }
+
+        .corner::before {
+            width: 1px;
+            height: 35px;
+        }
+
+        .corner::after {
+            width: 35px;
+            height: 1px;
+        }
+
+        .top-left {
+            top: 18px;
+            left: 18px;
+        }
+
+        .bottom-right {
+            right: 18px;
+            bottom: 18px;
+
+            transform: rotate(180deg);
+        }
+
+        /* =========================
+           TEXT
+        ========================= */
+
+        .title {
+            font-size: 30px;
+            font-weight: 800;
+
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            margin-top: 8px;
+            margin-bottom: 30px;
+
+            color: #777;
+
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        /* =========================
+           FORM
+        ========================= */
+
+        .field {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+
+            margin-bottom: 8px;
+
+            color: #999;
+
+            font-size: 10px;
+            font-weight: 700;
+
+            letter-spacing: 1.5px;
+
+            text-transform: uppercase;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+
+            padding: 14px 15px;
+
+            outline: none;
+
+            border: 1px solid #292929;
+
+            border-radius: 9px;
+
+            background: rgba(5,5,5,0.82);
+
+            color: #fff;
+
+            font-family: inherit;
+            font-size: 14px;
+
+            transition:
+                border-color 0.2s ease,
+                background 0.2s ease,
+                box-shadow 0.2s ease;
+        }
+
+        input::placeholder,
+        textarea::placeholder {
+            color: #444;
+        }
+
+        input:focus,
+        textarea:focus {
+            border-color: #666;
+
+            background: #090909;
+
+            box-shadow:
+                0 0 0 3px rgba(255,255,255,0.035);
+        }
+
+        textarea {
+            min-height: 125px;
+
+            resize: vertical;
+        }
+
+        /* =========================
+           BUTTONS
+        ========================= */
+
+        .buttons {
+            display: flex;
+
+            gap: 10px;
+
+            margin-top: 25px;
+        }
+
+        button {
+            width: 100%;
+
+            padding: 14px 18px;
+
+            cursor: pointer;
+
+            border: 1px solid #444;
+
+            border-radius: 9px;
+
+            background: #fff;
+
+            color: #000;
+
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 800;
+
+            letter-spacing: 0.5px;
+
+            transition: 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+
+            background: #ddd;
+
+            box-shadow:
+                0 10px 30px rgba(255,255,255,0.08);
+        }
+
+        .transfer {
+            background: #111;
+
+            border-color: #292929;
+
+            color: #aaa;
+        }
+
+        .transfer:hover {
+            background: #191919;
+
+            color: #fff;
+        }
+
+        /* =========================
+           FOOTER
+        ========================= */
+
+        .footer {
+            margin-top: 18px;
+
+            text-align: center;
+
+            color: #3d3d3d;
+
+            font-size: 9px;
+            font-weight: 700;
+
+            letter-spacing: 2px;
+
+            text-transform: uppercase;
+        }
+
+        /* =========================
+           RICKROLL
+        ========================= */
+
+        .rickroll {
+            position: fixed;
+
+            right: 22px;
+            bottom: 22px;
+
+            z-index: 10;
+
+            padding: 10px 14px;
+
+            border: 1px solid #292929;
+
+            border-radius: 8px;
+
+            background: rgba(10,10,10,0.8);
+
+            color: #555;
+
+            font-size: 9px;
+            font-weight: 800;
+
+            letter-spacing: 1.5px;
+
+            text-decoration: none;
+
+            backdrop-filter: blur(10px);
+
+            transition: 0.2s ease;
+        }
+
+        .rickroll:hover {
+            color: #aaa;
+
+            border-color: #444;
+
+            background: rgba(20,20,20,0.95);
+
+            transform: translateY(-2px);
+        }
+
+        /* =========================
+           MOBILE
+        ========================= */
+
+        @media (max-width: 600px) {
+
+            body {
+                padding: 20px;
+
+                overflow: auto;
+            }
+
+            .card {
+                padding: 28px 22px;
+            }
+
+            .logo {
+                font-size: 42px;
+            }
+
+            .rickroll {
+                right: 15px;
+                bottom: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- =========================
+         BACKGROUND
+    ========================== -->
+
+    <canvas id="particles"></canvas>
+
+    <div class="background">
+
+        <div class="space-glow"></div>
+
+    </div>
+
+
+    <!-- =========================
+         MAIN
+    ========================== -->
+
+    <div class="wrapper">
+
+        <div class="logo">
+          /ᐠ - ˕ -マ
+        </div>
+
+
+
+
+        <div class="card">
+
+            <div class="corner top-left"></div>
+            <div class="corner bottom-right"></div>
+
+
+            <div class="title">
+                Оставить запрос
+            </div>
+
+
+            <div class="subtitle">
+                Заполните форму ниже. Данные будут сохранены
+                во временное хранилище перед передачей в БД.
+            </div>
+
+
+            <section class="guess-game" aria-labelledby="guess-game-title">
+                <div class="game-header"><div><div class="game-kicker">BINARY SEARCH // TRAINING MODE</div><h2 id="guess-game-title">УГАДЕМ ID ЗАЯВКИ</h2></div><div class="attempt-counter"><span id="attempts-used">0</span>/7</div></div><p class="game-description">Преподаватель загадывает ID от 1 до 100. Система предлагает середину диапазона, игрок отвечает, больше или меньше число.</p><div class="teacher-panel" id="teacher-panel"><button type="button" id="start-game">НАЧАТЬ ИГРУ</button></div><div class="player-panel is-hidden" id="player-panel"><div class="guess-display"><strong id="current-guess">50</strong></div><p class="game-message" id="game-message" aria-live="polite">Загаданное число больше или меньше?</p><div class="game-actions"><button type="button" class="answer-button lower" data-answer="lower">ЗАГАДАННОЕ МЕНЬШЕ</button><button type="button" class="answer-button equal" data-answer="equal">УГАДАЛИ</button><button type="button" class="answer-button higher" data-answer="higher">ЗАГАДАННОЕ БОЛЬШЕ</button></div><button type="button" class="restart-button" id="restart-game">ЗАГАДАТЬ ЗАНОВО</button></div></section>
+
+            <form action="/request" method="POST">
+
+                <div class="field">
+
+                    <label>ФИО</label>
+
+                    <input
+                        type="text"
+                        name="fullName"
+                        placeholder="ФИО"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>Мобильный телефон</label>
+
+                    <input
+                        type="text"
+                        name="phone"
+                        placeholder="+7 ... ... .. .."
+                        required
+                    >
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>E-mail</label>
+
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="@mail.ru"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="field">
+
+                    <label>Текст запроса</label>
+
+                    <textarea
+                        name="message"
+                        placeholder="Опишите ваш запрос..."
+                        required
+                    ></textarea>
+
+                </div>
+
+
+                <div class="buttons">
+
+                    <button type="submit">
+                        СОХРАНИТЬ ЗАПРОС
+                    </button>
+
+                </div>
+
+            </form>
+
+
+            <form action="/transfer" method="POST">
+
+                <div class="buttons">
+
+                    <button
+                        type="submit"
+                        class="transfer"
+                    >
+                        ПЕРЕДАТЬ В DATABASE →
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+
+        <div class="footer">
+            Гычаジャイチャ // © アプリ // 2026
+        </div>
+
+    </div>
+
+    <script>
+
+        const game={min:1,max:100,attempts:0,active:false};
+        const teacherPanel=document.getElementById("teacher-panel"), playerPanel=document.getElementById("player-panel"), currentGuess=document.getElementById("current-guess"), attemptsUsed=document.getElementById("attempts-used"), gameMessage=document.getElementById("game-message");
+        function nextGuess(){return Math.floor((game.min+game.max)/2)}
+        function updateGuess(){currentGuess.textContent=nextGuess();attemptsUsed.textContent=game.attempts}
+        function startGame(){game.secretId=Math.floor(Math.random()*100)+1;game.min=1;game.max=100;game.attempts=0;game.active=true;teacherPanel.classList.add("is-hidden");playerPanel.classList.remove("is-hidden");gameMessage.textContent="Загаданное число больше или меньше?";updateGuess()}
+        function finishGame(text){game.active=false;gameMessage.textContent=text;document.querySelectorAll(".answer-button").forEach(b=>b.disabled=true)}
+        function answer(type){if(!game.active)return;const guess=nextGuess();game.attempts++;if(type==="equal"){finishGame("Победа! Система нашла ID "+guess+" за "+game.attempts+" попыток.");updateGuess();return}if(type==="lower")game.max=guess-1;else game.min=guess+1;if(game.attempts>=7||game.min>game.max){finishGame("Попытки закончились. Возможно, был дан неверный ответ.");updateGuess();return}gameMessage.textContent="Принято. Следующая проверка диапазона:";updateGuess()}
+        function restartGame(){game.active=false;playerPanel.classList.add("is-hidden");teacherPanel.classList.remove("is-hidden");attemptsUsed.textContent="0";document.querySelectorAll(".answer-button").forEach(b=>b.disabled=false)}
+        document.getElementById("start-game").addEventListener("click",startGame);document.getElementById("restart-game").addEventListener("click",restartGame);document.querySelectorAll(".answer-button").forEach(b=>b.addEventListener("click",()=>answer(b.dataset.answer)));
+
+        const canvas = document.getElementById("particles");
+        const ctx = canvas.getContext("2d");
+        let width;
+        let height;
+        let stars = [];
+
+        const starSettings = {
+            count: 180,
+            minSize: 1,
+            maxSize: 2.5,
+            minAlpha: 0.25,
+            maxAlpha: 0.95
+        };
+
+        function resizeCanvas() {
+            const ratio = window.devicePixelRatio || 1;
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * ratio;
+            canvas.height = height * ratio;
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        }
+
+        function createStar() {
+            return {
+                x: Math.random() * width,
+                y: Math.random() * height,
+                size: starSettings.minSize + Math.random() * (starSettings.maxSize - starSettings.minSize),
+                alpha: starSettings.minAlpha + Math.random() * (starSettings.maxAlpha - starSettings.minAlpha),
+                direction: Math.random() > 0.5 ? 1 : -1,
+                speed: 0.003 + Math.random() * 0.012,
+                phase: Math.random() * Math.PI * 2
+            };
+        }
+
+        function createStars() {
+            stars = Array.from({ length: starSettings.count }, createStar);
+        }
+
+        function drawStars(time) {
+            ctx.clearRect(0, 0, width, height);
+
+            for (const star of stars) {
+                const flicker = Math.sin(time * star.speed + star.phase) * 0.25;
+                const alpha = Math.max(0.08, Math.min(1, star.alpha + flicker));
+                const pixelSize = Math.max(1, Math.round(star.size));
+
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.fillRect(Math.round(star.x), Math.round(star.y), pixelSize, pixelSize);
+            }
+
+            requestAnimationFrame(drawStars);
+        }
+
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+        createStars();
+        requestAnimationFrame(drawStars);
+    </script>
+
+</body>
+</html>
